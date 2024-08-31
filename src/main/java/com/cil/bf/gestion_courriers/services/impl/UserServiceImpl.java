@@ -53,7 +53,9 @@ public class UserServiceImpl implements UserServiceInt {
             List<String> errors = UserValidator.valider(userDto);
             if (!errors.isEmpty()) {
                 // Retourne une réponse avec un statut BAD_REQUEST si des erreurs sont présentes
-                return CourriersUtils.getResponseEntity(Constants.DONNEES_INVALIDES, HttpStatus.BAD_REQUEST);
+                log.info(String.join("\n", errors));
+                return CourriersUtils.getResponseEntity("\n" + String.join(",\n", errors) + "\n",
+                        HttpStatus.BAD_REQUEST);
             }
 
             log.info("Utilisateur valide\n");
@@ -62,19 +64,22 @@ public class UserServiceImpl implements UserServiceInt {
             if (userRepository.findByEmail(userDto.getEmail()) != null
                     || userRepository.findByMatricule(userDto.getMatricule()) != null) {
                 // Retourne une réponse indiquant que l'utilisateur existe déjà
-                return CourriersUtils.getResponseEntity("L'utilisateur existe déjà.", HttpStatus.CONFLICT);
+                log.info("Utilisateur existe déjà " + "{} ou {}\n\n", userDto.getEmail(), userDto.getMatricule());
+                return CourriersUtils.getResponseEntity(
+                        "L'utilisateur existe déjà avec " + userDto.getEmail() + " ou " + userDto.getMatricule() + "",
+                        HttpStatus.CONFLICT);
             }
 
             // Enregistre le nouvel utilisateur
             User user = UserDto.toEntity(userDto);
             user.setPassword(passwordEncoder.encode(userDto.getPassword()));
             userRepository.save(user);
-
+            log.info("Utilisateur enregistré avec succès.\n\n");
             return CourriersUtils.getResponseEntity("Enregistré avec succès.", HttpStatus.CREATED);
 
         } catch (Exception e) {
             // Enregistre l'erreur dans le journal en cas d'exception
-            log.error("Erreur lors de l'inscription de l'utilisateur\n\n", e);
+            log.error("Erreur lors de l'inscription de l'utilisateur.\n\n", e);
             return CourriersUtils.getResponseEntity(Constants.QUELQUE_CHOSE_S_EST_PASSE,
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -82,7 +87,8 @@ public class UserServiceImpl implements UserServiceInt {
     }
 
     /**
-     * Met à jour les informations d'un utilisateur existant.
+     * Met à jour les informations d'un utilisateur existant.userDto.getEmail(),
+     * userDto.getMatricule()
      * 
      * @param userDto Les informations de l'utilisateur à mettre à jour.
      * @return ResponseEntity avec un message de succès ou d'erreur.
@@ -92,12 +98,22 @@ public class UserServiceImpl implements UserServiceInt {
         log.info("\nÀ l'intérieur de l'utilisateur\n\n" + " {}", userDto);
 
         try {
+            // Valide les informations de l'utilisateur
+            List<String> errors = UserValidator.valider(userDto);
+            if (!errors.isEmpty()) {
+                // Retourne une réponse avec un statut BAD_REQUEST si des erreurs sont présentes
+                log.info(String.join("\n", errors));
+                return CourriersUtils.getResponseEntity("\n" + String.join(",\n", errors) + "\n",
+                        HttpStatus.BAD_REQUEST);
+            }
             log.info("Utilisateur valide\n\n");
 
             // Cherche l'utilisateur existant par son ID
             Optional<User> existeUserOpt = userRepository.findById(userDto.getId());
             if (!existeUserOpt.isPresent()) {
                 // Retourne une réponse NOT_FOUND si l'utilisateur n'existe pas
+
+                log.error("Utilisateur non trouvé.\n\n");
                 return CourriersUtils.getResponseEntity("Utilisateur non trouvé.", HttpStatus.NOT_FOUND);
             }
 

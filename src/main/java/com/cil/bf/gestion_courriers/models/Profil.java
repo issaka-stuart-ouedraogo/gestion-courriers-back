@@ -4,14 +4,10 @@ import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-
-import org.hibernate.annotations.Cache;
 
 /**
  *
@@ -24,7 +20,6 @@ import org.hibernate.annotations.Cache;
 @Data
 @Entity
 @Table(name = "profil")
-@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
 public class Profil extends AbstractAuditingEntity {
 
     @Id
@@ -39,7 +34,6 @@ public class Profil extends AbstractAuditingEntity {
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.REMOVE })
     @JoinTable(name = "profils_privileges", joinColumns = @JoinColumn(name = "profil_id"), inverseJoinColumns = @JoinColumn(name = "privilege_id"))
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     private Set<Privilege> privilegeList = new HashSet<>();
 
 }

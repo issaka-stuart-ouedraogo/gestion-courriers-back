@@ -18,6 +18,7 @@ import com.cil.bf.gestion_courriers.models.Privilege;
 import com.cil.bf.gestion_courriers.models.Profil;
 import com.cil.bf.gestion_courriers.repository.PrivilegeRepo;
 import com.cil.bf.gestion_courriers.repository.ProfilRepo;
+import com.cil.bf.gestion_courriers.repository.UserRepo;
 import com.cil.bf.gestion_courriers.services.interfaces.ProfilServiceInt;
 import com.cil.bf.gestion_courriers.utils.Constants;
 import com.cil.bf.gestion_courriers.utils.CourriersUtils;
@@ -34,6 +35,9 @@ public class ProfilServiceImpl implements ProfilServiceInt {
     @Autowired
     PrivilegeRepo privilegeRepository;
 
+    @Autowired
+    UserRepo userRepository;
+
     /**
      * Enregistre un nouvel profil dans le système.
      * 
@@ -42,13 +46,14 @@ public class ProfilServiceImpl implements ProfilServiceInt {
      */
     @Override
     public ResponseEntity<String> save(ProfilDto profilDto) {
-        log.info("À l'intérieur de l'enregistrement\n" + " {}", profilDto);
+        log.info("\nÀ l'intérieur de l'enregistrement\n" + " {}", profilDto);
         try {
             // Valide les informations du profil
             List<String> errors = ProfilValidator.valider(profilDto);
             if (!errors.isEmpty()) {
                 // Retourne une réponse avec un statut BAD_REQUEST si des erreurs sont présentes
-                return CourriersUtils.getResponseEntity(errors.get(0),
+                log.info(String.join("\n", errors));
+                return CourriersUtils.getResponseEntity("\n" + String.join(",\n", errors) + "\n",
                         HttpStatus.BAD_REQUEST);
             }
             log.info("Profil valide\n");
@@ -56,12 +61,13 @@ public class ProfilServiceImpl implements ProfilServiceInt {
             // Si le profil existe déjà par code ou libellé, retourne une réponse NOT_FOUND
             if (profilRepository.findByCode(profilDto.getCode()) != null
                     || profilRepository.findByLibelle(profilDto.getLibelle()) != null) {
+                log.info("Profil existe déjà\n\n");
                 return CourriersUtils.getResponseEntity("Profil existe déjà.", HttpStatus.CONFLICT);
             }
 
             // Enregistre le profil dans le repository
             profilRepository.save(ProfilDto.toEntity(profilDto));
-
+            log.info("Profil enregistré avec succès.\n\n");
             return CourriersUtils.getResponseEntity("Profil enregistré avec succès.", HttpStatus.OK);
 
         } catch (Exception e) {
@@ -83,6 +89,14 @@ public class ProfilServiceImpl implements ProfilServiceInt {
         log.info("\nÀ l'intérieur du profil\n\n" + " {}", profilDto);
 
         try {
+            // Valide les informations du profil
+            List<String> errors = ProfilValidator.valider(profilDto);
+            if (!errors.isEmpty()) {
+                // Retourne une réponse avec un statut BAD_REQUEST si des erreurs sont présentes
+                log.info(String.join("\n", errors));
+                return CourriersUtils.getResponseEntity("\n" + String.join(",\n", errors) + "\n",
+                        HttpStatus.BAD_REQUEST);
+            }
             log.info("Profil valide\n\n");
 
             // Cherche le profil existant par son ID, par Libelle et Code.
@@ -92,6 +106,7 @@ public class ProfilServiceImpl implements ProfilServiceInt {
 
             if (!existeProfilByIdOpt.isPresent()) {
                 // Retourne une réponse NOT_FOUND si le profil n'existe pas
+                log.info("Profil non trouvé.\n\n");
                 return CourriersUtils.getResponseEntity("Profil non trouvé.", HttpStatus.NOT_FOUND);
             }
 
@@ -102,6 +117,7 @@ public class ProfilServiceImpl implements ProfilServiceInt {
             if ((existeProfilByCode != null && !profil.getId().equals(existeProfilByCode.getId())) ||
                     (existeProfilByLibelle != null && !profil.getId().equals(existeProfilByLibelle.getId()))) {
                 // Retourne une réponse indiquant que le profil existe déjà
+                log.info("Le profil existe déjà.\n\n");
                 return CourriersUtils.getResponseEntity("Le profil existe déjà.", HttpStatus.CONFLICT);
             }
 
@@ -133,12 +149,13 @@ public class ProfilServiceImpl implements ProfilServiceInt {
     @Override
     @Transactional // Assure que les opérations sont effectuées dans une transaction
     public ResponseEntity<String> delete(Long id) {
-
+        log.info("\nSuppression du profil " + "{}\n\n", id);
         try {
             // Vérifiez d'abord si le profil existe
             Optional<Profil> profilOpt = profilRepository.findById(id);
             if (!profilOpt.isPresent()) {
                 // Retourne une réponse indiquant que le profil existe déjà
+                log.info("Profil n'existe pas.\n\n");
                 return CourriersUtils.getResponseEntity("Le profil n'existe pas.", HttpStatus.NOT_FOUND);
             }
 
@@ -146,19 +163,30 @@ public class ProfilServiceImpl implements ProfilServiceInt {
             // Vérifie si le Profil est associé à des Privileges
             if (!profil.getPrivilegeList().isEmpty()) {
                 // Message d'erreur si des Privileges sont associés
+                log.info("Le profil est associé à  privilèges.\n\n");
                 return CourriersUtils.getResponseEntity(
-                        "Impossible de supprimer le profil avec les privilèges associés",
+                        "Impossible de supprimer ! Le profil est associé à  privilèges.",
                         HttpStatus.INTERNAL_SERVER_ERROR);
 
             }
-            // Supprimez le profil; cela supprime également les associations avec les
-            // privilèges
+
+            // Vérifie si le Profil est associé à des Utilisateurs
+            if (!userRepository.findByProfilListId(profil.getId()).isEmpty()) {
+                // Message d'erreur si des Utilisateurs sont associés
+                log.info("Le Profil est associé à des Utilisateurs.\n\n");
+                return CourriersUtils.getResponseEntity(
+                        "Impossible de supprimer ! Le Profil est associé à des Utilisateurs.",
+                        HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            // Suppression du profil
             profilRepository.delete(profil);
+            log.info("Profil est supprmé\n\n");
             return CourriersUtils.getResponseEntity("Profil supprimé",
                     HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             // Enregistre l'erreur dans le journal en cas d'exception
-            log.error("Erreur lors de la mise à jour de l'utilisateur\n\n", e);
+            log.error("Erreur lors de la suppression de l'utilisateur\n\n", e);
         }
         return CourriersUtils.getResponseEntity(Constants.QUELQUE_CHOSE_S_EST_PASSE,
                 HttpStatus.INTERNAL_SERVER_ERROR);
@@ -166,7 +194,9 @@ public class ProfilServiceImpl implements ProfilServiceInt {
 
     @Override
     public ResponseEntity<List<ProfilDto>> findAll() {
+        log.info("\nRecherche de tous les Utilisateurs\n\n");
         try {
+
             return new ResponseEntity<>(profilRepository.findAll().stream()
                     .map(ProfilDto::fromEntity)
                     .collect(Collectors.toList()), HttpStatus.OK);

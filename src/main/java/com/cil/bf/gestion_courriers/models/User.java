@@ -12,8 +12,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
@@ -26,7 +24,6 @@ import org.hibernate.annotations.Where;
 @Table(name = "user")
 @SQLDelete(sql = "UPDATE users SET deleted = true WHERE id=?")
 @Where(clause = "deleted = false")
-@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
 public class User extends AbstractAuditingEntity {
 
     @Id
@@ -68,7 +65,6 @@ public class User extends AbstractAuditingEntity {
     private boolean deleted = false;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.REMOVE })
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @JoinTable(name = "users_profils", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "profil_id"))
     private Set<Profil> profilList = new HashSet<>();
 }

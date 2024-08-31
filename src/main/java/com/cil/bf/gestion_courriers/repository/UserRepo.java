@@ -1,6 +1,7 @@
 package com.cil.bf.gestion_courriers.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -19,4 +20,6 @@ public interface UserRepo extends JpaRepository<User, Long> {
 
     @Query("SELECT p.privilegeList FROM User u JOIN u.profilList p WHERE u.id = :id")
     List<Privilege> findAllPrivilege(Long id);
+
+    Optional<User> findByProfilListId(Long id);
 }
